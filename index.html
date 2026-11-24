@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>QPL Card Hunt</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* VOICE: a collector's field companion, quick and cheerful, built for one thumb
+   IDEA: the QPL 130 trading card itself: purple field, gold edge, numbered picks
+   PICTURE: the three nearest cards to grab, each a little trading card with a big rank number
+   COLOUR and TYPE: QPL purple ground, gold accent, sky-teal support; Outfit throughout
+   LAYOUT: one column, purple header with progress, then picks, then the checklist */
+:root{color-scheme:light dark;--bg:light-dark(#f5f2fb,#140b2b);--card:light-dark(#ffffff,#21154a);--ink:light-dark(#1c1136,#f4f0ff);--mute:light-dark(#5f547c,#b8acd9);--line:light-dark(#e2daf2,#3a2b6c);--pur:#35196f;--pur2:#4a2797;--gold:#f5b700;--teal:#1fb3d6;--ok:light-dark(#0d7546,#62e0a2);--wait:light-dark(#8e5600,#ffc95e);--off:light-dark(#a02a3c,#ff95a5);--chip:light-dark(#ece6f8,#2d1f5c)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 Outfit,system-ui,sans-serif;overflow-x:clip}
+button,select,input{font:inherit;color:inherit}
+.top{background:var(--pur);color:#fff;padding:22px max(5vw,16px) 20px;background-image:radial-gradient(circle at 92% -20%,var(--pur2) 0 38%,transparent 39%)}
+.wrap{max-width:720px;margin:0 auto}
+.top h1{margin:0;font-size:clamp(30px,8vw,44px);line-height:1.05;font-weight:700;text-wrap:balance}
+.top h1 b{color:var(--gold);font-weight:700}
+.top p{margin:6px 0 14px;color:#d9cff5}
+.bar{height:10px;border-radius:6px;background:rgba(255,255,255,.16);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--gold);border-radius:6px;transition:width .4s}
+.stats{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:8px;font-size:15px;color:#e8e1ff}
+.stats strong{color:#fff;font-size:17px}
+.tabs{display:flex;gap:6px;max-width:720px;margin:14px auto 0;padding:0 max(5vw,16px)}
+.tabs button{flex:1;min-height:44px;border:0;border-radius:12px;background:var(--chip);font-weight:600;cursor:pointer}
+.tabs button[aria-selected=true]{background:var(--gold);color:#22113f}
+main{padding:14px max(5vw,16px) 40px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.btn{min-height:46px;padding:0 16px;border-radius:12px;border:0;background:var(--pur2);color:#fff;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:8px;text-decoration:none}
+.btn.gold{background:var(--gold);color:#22113f}
+.btn.ghost{background:var(--chip);color:var(--ink)}
+.btn svg{width:18px;height:18px;flex:none}
+.btn:focus-visible,select:focus-visible,input:focus-visible,.chips button:focus-visible,.tabs button:focus-visible{outline:3px solid var(--teal);outline-offset:2px}
+#locBtn{flex:1 1 220px;justify-content:center;font-size:17px}
+label.near{display:block;margin:14px 0 4px;font-size:14px;color:var(--mute)}
+select,input[type=search]{width:100%;min-height:46px;border-radius:12px;border:1px solid var(--line);background:var(--bg);padding:0 12px;font-size:16px}
+.chips{display:flex;gap:6px;margin-top:12px}
+.chips button{flex:1;min-height:40px;border-radius:999px;border:1px solid var(--line);background:transparent;font-size:14px;font-weight:500;cursor:pointer}
+.chips button[aria-pressed=true]{background:var(--teal);border-color:var(--teal);color:#04202a;font-weight:600}
+#msg{margin:12px 2px 0;font-size:15px;color:var(--mute)}
+#msg:empty{display:none}
+#from{margin:18px 2px 8px;font-size:14px;color:var(--mute)}
+.pick{position:relative;display:grid;grid-template-columns:52px minmax(0,1fr);gap:4px 12px;background:var(--card);border:2px solid var(--gold);border-radius:18px;padding:16px 14px;margin-bottom:12px;box-shadow:0 6px 18px -10px rgba(53,25,111,.5)}
+.rank{grid-row:span 3;width:52px;height:52px;border-radius:14px;background:var(--pur);color:var(--gold);display:grid;place-items:center;font-size:28px;font-weight:700}
+.pick h3{margin:0;font-size:21px;line-height:1.15}
+.addr{font-size:14px;color:var(--mute)}
+.meta{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;font-size:15px}
+.dist{font-weight:600}
+.pill{display:inline-block;padding:2px 10px;border-radius:999px;font-size:13px;font-weight:600;background:var(--chip);white-space:nowrap}
+.pill.open{color:var(--ok)}.pill.later{color:var(--wait)}.pill.closed{color:var(--off)}
+.tag{font-size:13px;color:var(--mute)}
+.acts{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.acts .btn{flex:1 1 130px;justify-content:center;font-size:15px}
+.empty{padding:18px;text-align:center;color:var(--mute);border:1px dashed var(--line);border-radius:16px}
+.list{list-style:none;margin:12px 0 0;padding:0}
+.list li{border-bottom:1px solid var(--line)}
+.list label{display:flex;gap:12px;align-items:center;min-height:52px;padding:6px 2px;cursor:pointer}
+.list input{width:24px;height:24px;accent-color:var(--pur2);flex:none}
+.list .nm{flex:1;font-weight:500}
+.list .got .nm{color:var(--mute);text-decoration:line-through}
+.list small{display:block;font-size:13px;color:var(--mute);font-weight:400;text-decoration:none}
+h2{font-size:20px;margin:22px 0 4px}
+.note{font-size:13px;color:var(--mute);margin-top:18px}
+[hidden]{display:none!important}
+@media(prefers-reduced-motion:reduce){.bar i{transition:none}}
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <h1>QPL 130 <b>Card Hunt</b></h1>
+  <p>The three nearest cards you still need, open when you get there.</p>
+  <div class="bar" aria-hidden="true"><i id="barFill" style="width:0"></i></div>
+  <div class="stats"><span><strong id="gotN">0</strong> of 67 branch cards</span><span><strong id="spN">0</strong> of 3 special cards</span></div>
+</div></header>
+
+<nav class="tabs" role="tablist">
+  <button role="tab" id="tabNear" aria-selected="true">Nearest</button>
+  <button role="tab" id="tabList" aria-selected="false">Checklist</button>
+</nav>
+
+<main class="wrap">
+  <section id="viewNear">
+    <div class="panel">
+      <div class="row">
+        <button class="btn gold" id="locBtn"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a7 7 0 0 0-7 7c0 5.2 7 13 7 13s7-7.8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>Use my location</button>
+      </div>
+      <label class="near" for="nearSel">Or start from a branch</label>
+      <select id="nearSel"><option value="">Choose a branch…</option></select>
+      <div class="chips" role="group" aria-label="Show">
+        <button data-mode="now" aria-pressed="true">Open now</button>
+        <button data-mode="today" aria-pressed="false">Open today</button>
+        <button data-mode="any" aria-pressed="false">Any day</button>
+      </div>
+      <p id="msg"></p>
+    </div>
+    <p id="from"></p>
+    <div id="results"></div>
+  </section>
+
+  <section id="viewList" hidden>
+    <input type="search" id="q" placeholder="Search branches" aria-label="Search branches">
+    <div class="chips" role="group" aria-label="Filter">
+      <button data-f="need" aria-pressed="true">Still need</button>
+      <button data-f="got" aria-pressed="false">Collected</button>
+      <button data-f="all" aria-pressed="false">All</button>
+    </div>
+    <ul class="list" id="list"></ul>
+    <h2>Special cards</h2>
+    <ul class="list" id="specials"></ul>
+    <h2>Move your progress</h2>
+    <p class="tag">Using this app in two places? Copy your code here, then paste it into the other copy.</p>
+    <div class="row"><button class="btn ghost" id="copyBtn">Copy progress code</button></div>
+    <div class="row" style="margin-top:8px"><input type="search" id="paste" placeholder="Paste a progress code" aria-label="Progress code" style="flex:1 1 200px"><button class="btn" id="loadBtn">Load</button></div>
+    <p class="tag" id="xmsg"></p>
+  </section>
+
+  <p class="note">Hours follow the QPL 130 Collector's Quick Guide; check with the library on holidays. Mobile library stops run 10 AM–5 PM on their day only and may park near the branch rather than at it. Distances are straight-line; the Directions buttons give the real route. Court Square and Rochdale Village start ticked, since their cards are handed out nearby.</p>
+</main>
+
+<script type="application/json" id="state">{"got":{"court-square":1,"rochdale-village":1,"breezy-point":1,"mcgoldrick":1,"steinway":1,"st-albans":1,"rosedale":1,"central-library":1,"flushing":1,"poppenhusen":1,"mitchell-linden":1,"whitestone":1},"sp":{"world-cup":1,"america-250":1,"freedom-to-read":1},"t":1795512080145}</script>
+<script>
+{
+const SRC = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+// name, address, lat, lon, schedule
+const RAW = [
+["Arverne","312 Beach 54 St",40.5925,-73.7845,"std"],["Astoria","14-01 Astoria Blvd",40.7716,-73.9298,"m1"],
+["Auburndale","25-55 Francis Lewis Blvd",40.7723,-73.7957,"std"],["Baisley Park","117-11 Sutphin Blvd",40.6777,-73.7907,"m1"],
+["Bay Terrace","18-36 Bell Blvd",40.7820,-73.7770,"std"],["Bayside","214-20 Northern Blvd",40.7609,-73.7709,"std"],
+["Bellerose","250-06 Hillside Ave",40.7363,-73.7205,"std"],["Briarwood","85-12 Main St",40.7095,-73.8195,"std"],
+["Broad Channel","16-26 Cross Bay Blvd",40.6030,-73.8200,"std"],["Broadway","40-20 Broadway",40.7590,-73.9175,"std"],
+["Breezy Point","Breezy Point (mobile stop)",40.5605,-73.9170,"m3"],["Cambria Heights","218-13 Linden Blvd",40.6955,-73.7395,"std"],
+["Central Library","89-11 Merrick Blvd",40.7080,-73.7952,"sun"],["Corona","38-23 104 St",40.7505,-73.8620,"std"],
+["Court Square","25-01 Jackson Ave",40.7470,-73.9435,"std"],["Douglaston/Little Neck","249-01 Northern Blvd",40.7682,-73.7381,"m5"],
+["East Elmhurst","95-06 Astoria Blvd",40.7615,-73.8720,"std"],["East Flushing","196-36 Northern Blvd",40.7580,-73.7845,"std"],
+["Elmhurst","86-07 Broadway",40.7381,-73.8771,"std"],["Far Rockaway","1637 Central Ave",40.6040,-73.7540,"sun"],
+["Far Rockaway Teen","2002 Cornaga Ave",40.6047,-73.7525,"teen"],["Flushing","41-17 Main St",40.7578,-73.8297,"sun"],
+["Forest Hills","108-19 71 Ave",40.7215,-73.8440,"std"],["Fresh Meadows","193-20 Horace Harding Expwy",40.7385,-73.7835,"std"],
+["Glen Oaks","256-04 Union Tpke",40.7480,-73.7155,"sun"],["Glendale","78-60 73 Pl",40.7029,-73.8760,"std"],
+["Hillcrest","187-05 Union Tpke",40.7302,-73.7826,"std"],["Hollis","202-05 Hillside Ave",40.7178,-73.7580,"m3"],
+["Howard Beach","92-06 156 Ave",40.6595,-73.8435,"std"],["Hunters Point","47-40 Center Blvd",40.7438,-73.9590,"sun"],
+["Jackson Heights","35-51 81 St",40.7509,-73.8862,"sun"],["Kew Gardens Hills","72-33 Vleigh Pl",40.7275,-73.8215,"sun"],
+["Langston Hughes","100-01 Northern Blvd",40.7590,-73.8690,"std"],["Laurelton","134-26 225 St",40.6755,-73.7465,"std"],
+["Lefferts","103-34 Lefferts Blvd",40.6870,-73.8220,"std"],["Lefrak City","98-30 57 Ave",40.7388,-73.8622,"m5"],
+["Long Island City","37-44 21 St",40.7575,-73.9405,"std"],["Maspeth","69-70 Grand Ave",40.7275,-73.8930,"std"],
+["McGoldrick","155-06 Roosevelt Ave",40.7627,-73.8129,"std"],["Middle Village","72-31 Metropolitan Ave",40.7128,-73.8778,"std"],
+["Mitchell-Linden","31-32 Union St",40.7711,-73.8269,"std"],["North Forest Park","98-27 Metropolitan Ave",40.7098,-73.8540,"std"],
+["North Hills","57-04 Marathon Pkwy",40.7562,-73.7340,"std"],["Ozone Park","92-24 Rockaway Blvd",40.6803,-73.8462,"std"],
+["Peninsula","92-25 Rockaway Beach Blvd",40.5865,-73.8155,"std"],["Pomonok","158-21 Jewel Ave",40.7275,-73.8105,"std"],
+["Poppenhusen","121-23 14 Ave",40.7880,-73.8470,"std"],["Queens Village","94-11 217 St",40.7193,-73.7389,"std"],
+["Queensboro Hill","60-05 Main St",40.7430,-73.8255,"std"],["Queensbridge","10-43 41 Ave",40.7553,-73.9440,"qb"],
+["Ravenswood","35-32 21 St",40.7600,-73.9390,"rv"],["Rego Park","91-41 63 Dr",40.7318,-73.8610,"m4"],
+["Richmond Hill","118-14 Hillside Ave",40.7020,-73.8300,"std"],["Ridgewood","20-12 Madison St",40.7052,-73.9007,"std"],
+["Rochdale Village","169-09 137 Ave",40.6735,-73.7737,"std"],["Rosedale","144-20 243 St",40.6575,-73.7380,"std"],
+["Seaside","116-15 Rockaway Beach Blvd",40.5785,-73.8370,"std"],["South Hollis","204-01 Hollis Ave",40.7055,-73.7520,"std"],
+["South Jamaica","108-41 Guy R Brewer Blvd",40.6966,-73.7883,"std"],["South Ozone Park","128-16 Rockaway Blvd",40.6765,-73.8135,"std"],
+["St. Albans","191-05 Linden Blvd",40.6928,-73.7610,"std"],["Steinway","21-45 31 St",40.7754,-73.9119,"std"],
+["Sunnyside","43-06 Greenpoint Ave",40.7413,-73.9205,"std"],["Whitestone","151-10 14 Rd",40.7880,-73.8130,"std"],
+["Windsor Park","79-50 Bell Blvd",40.7330,-73.7590,"std"],["Woodhaven","85-41 Forest Pkwy",40.6935,-73.8578,"std"],
+["Woodside","54-22 Skillman Ave",40.7462,-73.9075,"std"]];
+const B = RAW.map(([n,a,lat,lon,s]) => ({id:n.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/-$/,''), n, a, lat, lon, s}));
+const BY = Object.fromEntries(B.map(b => [b.id, b]));
+const SPECIALS = [["world-cup","World Cup"],["america-250","America 250"],["freedom-to-read","Freedom to Read"]];
+const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const DAYS_L = ['Sundays','Mondays','Tuesdays','Wednesdays','Thursdays','Fridays','Saturdays'];
+
+// ---- state: embedded in the page, mirrored to this browser ----
+let st;
+try { st = JSON.parse($('state').textContent); } catch (e) { st = {got:{}, sp:{}, t:0}; }
+try { const ls = JSON.parse(localStorage.getItem('qpl130') || 'null'); if (ls && ls.t > (st.t || 0)) st = ls; } catch (e) {}
+st.got = st.got || {}; st.sp = st.sp || {};
+const artP = (window.claude && claude.use) ? claude.use('artifact').catch(() => null) : Promise.resolve(null);
+let pubTimer;
+function save() {
+  st.t = Date.now();
+  try { localStorage.setItem('qpl130', JSON.stringify(st)); } catch (e) {}
+  clearTimeout(pubTimer);
+  pubTimer = setTimeout(async () => {
+    const art = await artP; if (!art) return;
+    keepView();
+    const json = JSON.stringify(st).replace(/</g, '\\u003c');
+    const html = SRC.replace(/(<script type="application\/json" id="state">)[\s\S]*?(<\/script>)/, (m, a, b) => a + json + b);
+    try { await art.publish(html); } catch (e) {}
+  }, 2500);
+}
+function keepView() { try { sessionStorage.setItem('qplView', JSON.stringify({start, mode, tab})); } catch (e) {} }
+
+// ---- hours ----
+const STD = {1:[10,18],2:[13,18],3:[10,18],4:[12,20],5:[10,18],6:[10,17]};
+function hours(b, d) {
+  const s = b.s;
+  if (s === 'std') return STD[d] || null;
+  if (s === 'sun') return d === 0 ? [12,17] : STD[d] || null;
+  if (s === 'qb') return ({1:[12,20],3:[12,20],4:[12,20],6:[10,17]})[d] || null;
+  if (s === 'rv') return d >= 1 && d <= 4 ? STD[d] : null;
+  if (s === 'teen') return d >= 1 && d <= 5 ? [14.5,18] : null;
+  if (s[0] === 'm') return d === +s[1] ? [10,17] : null;
+  return null;
+}
+const SCHED = {std:'Standard hours', sun:'Also open Sundays 12–5', qb:'Tech Lab hours · closed Tue, Fri, Sun', rv:'Mon–Thu only', teen:'Weekdays 2:30–6 PM'};
+const schedTag = b => b.s[0] === 'm' ? 'Mobile library · ' + DAYS_L[+b.s[1]] + ' 10–5 only' : SCHED[b.s];
+function fmt(h) { const hr = Math.floor(h), m = Math.round((h - hr) * 60), ap = hr >= 12 ? 'PM' : 'AM', h12 = hr % 12 || 12; return h12 + (m ? ':' + String(m).padStart(2,'0') : '') + ' ' + ap; }
+function nyNow() {
+  const p = new Intl.DateTimeFormat('en-US', {timeZone:'America/New_York', weekday:'short', hour:'numeric', minute:'numeric', hourCycle:'h23'}).formatToParts(new Date());
+  const g = k => (p.find(x => x.type === k) || {}).value;
+  return {d: DAYS.indexOf(g('weekday')), t: (+g('hour') % 24) + (+g('minute')) / 60};
+}
+function status(b, now) {
+  const h = hours(b, now.d);
+  if (h && now.t < h[0]) return {k:'later', today:true, txt:'Opens ' + fmt(h[0]) + ' today'};
+  if (h && now.t < h[1]) return {k:'open', today:true, txt:'Open · closes ' + fmt(h[1])};
+  for (let i = 1; i <= 7; i++) { const d = (now.d + i) % 7, hh = hours(b, d); if (hh) return {k:'closed', today:false, txt:'Closed · opens ' + (i === 1 ? 'tomorrow' : DAYS[d]) + ' ' + fmt(hh[0])}; }
+  return {k:'closed', today:false, txt:'Closed'};
+}
+
+// ---- distance ----
+function miles(a, b) {
+  const R = 3958.8, r = x => x * Math.PI / 180, dLa = r(b.lat - a.lat), dLo = r(b.lon - a.lon);
+  const h = Math.sin(dLa/2)**2 + Math.cos(r(a.lat)) * Math.cos(r(b.lat)) * Math.sin(dLo/2)**2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+function bearing(a, b) {
+  const y = b.lon - a.lon, x = (b.lat - a.lat) * 1.32; // rough scale for NYC latitude
+  const deg = (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+  return ['N','NE','E','SE','S','SW','W','NW'][Math.round(deg / 45) % 8];
+}
+const place = b => b.s === 'm3' && b.id === 'breezy-point' ? 'Breezy Point, Queens, NY' : b.a + ', Queens, NY';
+
+// ---- nearest view ----
+let start = null, mode = 'now', tab = 'near';
+function startPoint() { return !start ? null : start.type === 'gps' ? start : BY[start.id]; }
+function renderNear() {
+  const sp = startPoint(), res = $('results'), now = nyNow();
+  if (!sp) { $('from').textContent = ''; res.innerHTML = '<div class="empty">Tap “Use my location” or choose a branch to see your next three cards.</div>'; return; }
+  $('from').textContent = 'From ' + (start.type === 'gps' ? 'your location' : sp.n) + ' · ' + {now:'open right now', today:'still open today', any:'any day'}[mode];
+  const list = B.filter(b => !st.got[b.id] && !(start.type === 'branch' && b.id === start.id))
+    .map(b => ({b, d: miles(sp, b), s: status(b, now)}))
+    .filter(x => mode === 'any' || (mode === 'now' ? x.s.k === 'open' : x.s.today))
+    .sort((x, y) => x.d - y.d).slice(0, 3);
+  if (!list.length) {
+    const left = B.filter(b => !st.got[b.id]).length;
+    res.innerHTML = '<div class="empty">' + (left ? 'Nothing you still need is ' + (mode === 'now' ? 'open right now' : 'open later today') + '. Try “Any day” to plan ahead.' : 'Every branch card collected. Amazing!') + '</div>';
+    return;
+  }
+  const origin = start.type === 'gps' ? sp.lat + ',' + sp.lon : place(sp);
+  res.innerHTML = list.map((x, i) => {
+    const b = x.b, dest = encodeURIComponent(place(b)), o = encodeURIComponent(origin);
+    const walk = x.d < 2.5 ? ' · ~' + Math.max(1, Math.round(x.d * 20)) + ' min walk' : '';
+    return '<article class="pick">' +
+      '<div class="rank">' + (i + 1) + '</div>' +
+      '<h3>' + esc(b.n) + '</h3>' +
+      '<div class="addr">' + esc(b.a) + '</div>' +
+      '<div class="meta"><span class="dist">' + x.d.toFixed(1) + ' mi ' + bearing(sp, b) + walk + '</span>' +
+      '<span class="pill ' + x.s.k + '">' + esc(x.s.txt) + '</span><span class="tag">' + esc(schedTag(b)) + '</span></div>' +
+      '<div class="acts">' +
+      '<a class="btn" href="https://www.google.com/maps/dir/?api=1&origin=' + o + '&destination=' + dest + '&travelmode=transit" target="_blank" rel="noopener">Directions</a>' +
+      '<a class="btn ghost" href="https://maps.apple.com/?saddr=' + o + '&daddr=' + dest + '&dirflg=r" target="_blank" rel="noopener">Apple Maps</a>' +
+      '<button class="btn gold" data-act="got" data-id="' + b.id + '">Got the card</button>' +
+      '<button class="btn ghost" data-act="hop" data-id="' + b.id + '">Next from here</button>' +
+      '</div></article>';
+  }).join('');
+}
+$('results').addEventListener('click', e => {
+  const t = e.target.closest('button[data-act]'); if (!t) return;
+  const id = t.dataset.id;
+  if (t.dataset.act === 'got') { st.got[id] = 1; save(); renderAll(); }
+  else { start = {type:'branch', id}; $('nearSel').value = id; renderNear(); window.scrollTo({top: $('from').offsetTop - 12, behavior:'smooth'}); }
+});
+$('nearSel').innerHTML += B.map(b => '<option value="' + b.id + '">' + esc(b.n) + '</option>').join('');
+$('nearSel').addEventListener('change', e => { if (!e.target.value) return; start = {type:'branch', id:e.target.value}; $('msg').textContent = ''; renderNear(); keepView(); });
+$('locBtn').addEventListener('click', () => {
+  const fail = () => { $('msg').textContent = 'Couldn’t get your location here. Choose the branch you’re closest to instead.'; $('nearSel').focus(); };
+  if (!navigator.geolocation) return fail();
+  $('msg').textContent = 'Finding you…';
+  try {
+    navigator.geolocation.getCurrentPosition(p => {
+      start = {type:'gps', lat:p.coords.latitude, lon:p.coords.longitude};
+      $('msg').textContent = ''; $('nearSel').value = ''; renderNear(); keepView();
+    }, fail, {enableHighAccuracy:true, timeout:12000, maximumAge:60000});
+  } catch (e) { fail(); }
+});
+document.querySelectorAll('#viewNear .chips button').forEach(c => c.addEventListener('click', () => {
+  mode = c.dataset.mode;
+  document.querySelectorAll('#viewNear .chips button').forEach(x => x.setAttribute('aria-pressed', x === c));
+  renderNear(); keepView();
+}));
+
+// ---- checklist ----
+let filt = 'need';
+function renderList() {
+  const q = $('q').value.trim().toLowerCase(), now = nyNow();
+  const rows = B.filter(b => (filt === 'all' || (filt === 'got') === !!st.got[b.id]) && (!q || b.n.toLowerCase().includes(q)));
+  $('list').innerHTML = rows.length ? rows.map(b => {
+    const s = status(b, now), g = !!st.got[b.id];
+    return '<li class="' + (g ? 'got' : '') + '"><label><input type="checkbox" data-id="' + b.id + '"' + (g ? ' checked' : '') + '>' +
+      '<span class="nm">' + esc(b.n) + '<small>' + esc(b.a) + ' · ' + esc(schedTag(b)) + '</small></span>' +
+      '<span class="pill ' + s.k + '">' + (s.k === 'open' ? 'Open' : s.k === 'later' ? 'Later' : 'Closed') + '</span></label></li>';
+  }).join('') : '<li class="empty">No branches here.</li>';
+  $('specials').innerHTML = SPECIALS.map(([id, n]) => '<li class="' + (st.sp[id] ? 'got' : '') + '"><label><input type="checkbox" data-sp="' + id + '"' + (st.sp[id] ? ' checked' : '') + '><span class="nm">' + n + '</span></label></li>').join('');
+}
+$('viewList').addEventListener('change', e => {
+  const i = e.target; if (i.type !== 'checkbox') return;
+  const bag = i.dataset.sp ? st.sp : st.got, id = i.dataset.sp || i.dataset.id;
+  if (i.checked) bag[id] = 1; else delete bag[id];
+  save(); renderStats(); setTimeout(renderList, 250);
+});
+$('q').addEventListener('input', renderList);
+document.querySelectorAll('#viewList .chips button').forEach(c => c.addEventListener('click', () => {
+  filt = c.dataset.f;
+  document.querySelectorAll('#viewList .chips button').forEach(x => x.setAttribute('aria-pressed', x === c));
+  renderList();
+}));
+
+// ---- move progress between copies ----
+$('copyBtn').addEventListener('click', async () => {
+  const code = btoa(JSON.stringify({g:Object.keys(st.got), s:Object.keys(st.sp)}));
+  try { await navigator.clipboard.writeText(code); $('xmsg').textContent = 'Copied. Paste it into the other copy of the app.'; }
+  catch (e) { $('paste').value = code; $('paste').select(); $('xmsg').textContent = 'Copy the code from the box above.'; }
+});
+$('loadBtn').addEventListener('click', () => {
+  try {
+    const o = JSON.parse(atob($('paste').value.trim()));
+    const got = {}, sp = {};
+    (o.g || []).forEach(id => { if (BY[id]) got[id] = 1; });
+    (o.s || []).forEach(id => { if (SPECIALS.some(x => x[0] === id)) sp[id] = 1; });
+    st.got = got; st.sp = sp; save(); renderAll();
+    $('xmsg').textContent = 'Loaded ' + Object.keys(got).length + ' branch cards and ' + Object.keys(sp).length + ' special cards.';
+    $('paste').value = '';
+  } catch (e) { $('xmsg').textContent = 'That code didn’t work. Copy it again and paste the whole thing.'; }
+});
+
+// ---- tabs, stats ----
+function showTab(t) {
+  tab = t;
+  $('tabNear').setAttribute('aria-selected', t === 'near'); $('tabList').setAttribute('aria-selected', t === 'list');
+  $('viewNear').hidden = t !== 'near'; $('viewList').hidden = t !== 'list';
+  if (t === 'list') renderList(); else renderNear();
+}
+$('tabNear').addEventListener('click', () => showTab('near'));
+$('tabList').addEventListener('click', () => showTab('list'));
+function renderStats() {
+  const g = B.filter(b => st.got[b.id]).length, s = SPECIALS.filter(([id]) => st.sp[id]).length;
+  $('gotN').textContent = g; $('spN').textContent = s;
+  $('barFill').style.width = (g / B.length * 100).toFixed(1) + '%';
+}
+function renderAll() { renderStats(); tab === 'list' ? renderList() : renderNear(); }
+
+try {
+  const v = JSON.parse(sessionStorage.getItem('qplView') || 'null');
+  if (v) { start = v.start; mode = v.mode || 'now'; tab = v.tab || 'near';
+    if (start && start.type === 'branch') $('nearSel').value = start.id;
+    document.querySelectorAll('#viewNear .chips button').forEach(x => x.setAttribute('aria-pressed', x.dataset.mode === mode)); }
+} catch (e) {}
+renderStats(); showTab(tab);
+setInterval(() => { if (tab === 'near') renderNear(); }, 60000);
+}
+</script>
+</body>
+</html>
